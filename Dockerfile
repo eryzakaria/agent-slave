@@ -1,4 +1,4 @@
-FROM jenkins/inbound-agent:alpine
+FROM jenkins/inbound-agent:alpine3.19-jdk17
 
 USER root
 
@@ -12,17 +12,22 @@ RUN apk add --no-cache \
     python3 \
     py3-pip \
     py3-virtualenv \
-    openssl
+    openssl \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    libsodium-dev
 
 # create a virtualenv and activate it globally so pip works without --break-system-packages
+# do not preinstall PyGithub/requests here; the pipeline installs its own versions at runtime
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install "PyGithub>=2.0" "requests>=2.28" "urllib3>=2.0" \
     && rm -f /usr/lib/python3*/EXTERNALLY-MANAGED \
-    && printf 'PyGithub>=2.0\nrequests>=2.28\nurllib3>=2.0\n' > /opt/venv/constraints.txt
+    && mkdir -p /home/jenkins/.config/pip \
+    && chown -R jenkins:jenkins /home/jenkins/.config
 ENV PATH="/opt/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/opt/venv"
-ENV PIP_CONSTRAINT="/opt/venv/constraints.txt"
 
 # install kubectl
 RUN curl -LO https://dl.k8s.io/release/$(curl -LS https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl \
